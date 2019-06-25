@@ -91,4 +91,93 @@ public class ExtFlightDelaysDAO {
 			throw new RuntimeException("Error Connection Database");
 		}
 	}
+	
+	public List<Airport> getAirportMinimum(int voli){
+		String sql = "SELECT DISTINCT (a.id), a.IATA_CODE, a.AIRPORT, a.CITY, a.STATE, a.COUNTRY, a.LATITUDE, a.LONGITUDE, a.TIMEZONE_OFFSET, COUNT(f.ID) AS cnt " + 
+				"FROM flights f, airports a " + 
+				"WHERE f.ORIGIN_AIRPORT_ID=a.ID OR f.DESTINATION_AIRPORT_ID=a.id " + 
+				"GROUP BY a.id";
+		List<Airport> result = new ArrayList<Airport>();
+
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				if(rs.getInt("cnt")>=voli) {
+					Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
+							rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
+							rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
+					result.add(airport);
+				}
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+
+	public List<Airport> loadDestination(int id) {
+		String sql = "SELECT DISTINCT( a.id), a.IATA_CODE, a.AIRPORT, a.CITY, a.STATE, a.COUNTRY, a.LATITUDE, a.LONGITUDE, a.TIMEZONE_OFFSET " + 
+				"FROM airports a, flights f " + 
+				"WHERE a.id = f.DESTINATION_AIRPORT_ID AND f.ORIGIN_AIRPORT_ID =?";
+		List<Airport> result = new ArrayList<Airport>();
+
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, id);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+					Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
+							rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
+							rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
+					result.add(airport);
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+
+	public double getPeso(int p, int d) {
+		String sql = "SELECT AVG(f.ELAPSED_TIME) AS time " + 
+				"FROM flights f  " + 
+				"WHERE f.DESTINATION_AIRPORT_ID = ? AND f.ORIGIN_AIRPORT_ID=? OR f.DESTINATION_AIRPORT_ID =? AND f.ORIGIN_AIRPORT_ID=? ";
+		double peso = 0.0;
+
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, p);
+			st.setInt(2, d);
+			st.setInt(3, d);
+			st.setInt(4, p);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+					peso = rs.getDouble("time");
+			}
+
+			conn.close();
+			return peso;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
 }
