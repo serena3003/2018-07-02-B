@@ -91,28 +91,27 @@ public class ExtFlightDelaysDAO {
 			throw new RuntimeException("Error Connection Database");
 		}
 	}
-	
-	public List<Airport> getAirportMinimum(int voli){
-		String sql = "SELECT DISTINCT (a.id), a.IATA_CODE, a.AIRPORT, a.CITY, a.STATE, a.COUNTRY, a.LATITUDE, a.LONGITUDE, a.TIMEZONE_OFFSET, COUNT(f.ID) AS cnt " + 
-				"FROM flights f, airports a " + 
-				"WHERE f.ORIGIN_AIRPORT_ID=a.ID OR f.DESTINATION_AIRPORT_ID=a.id " + 
-				"GROUP BY a.id";
+
+	public List<Airport> getAirportMinimum(int voli) {
+		String sql = "SELECT a.id, a.IATA_CODE, a.AIRPORT, a.CITY, a.STATE, a.COUNTRY, a.LATITUDE, a.LONGITUDE, a.TIMEZONE_OFFSET  "
+				+ "FROM flights f, airports a " + "WHERE f.ORIGIN_AIRPORT_ID=a.ID OR f.DESTINATION_AIRPORT_ID=a.id "
+				+ "GROUP BY a.id " + "HAVING COUNT(f.ID) >= ?";
 		List<Airport> result = new ArrayList<Airport>();
 
 		try {
 			Connection conn = ConnectDB.getConnection();
 			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, voli);
 			ResultSet rs = st.executeQuery();
 
 			while (rs.next()) {
-				if(rs.getInt("cnt")>=voli) {
-					Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
-							rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
-							rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
-					result.add(airport);
-				}
+				Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
+						rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
+						rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
+				result.add(airport);
 			}
-
+			
+			System.out.println("\n----"+result.size());
 			conn.close();
 			return result;
 
@@ -124,9 +123,8 @@ public class ExtFlightDelaysDAO {
 	}
 
 	public List<Airport> loadDestination(int id) {
-		String sql = "SELECT DISTINCT( a.id), a.IATA_CODE, a.AIRPORT, a.CITY, a.STATE, a.COUNTRY, a.LATITUDE, a.LONGITUDE, a.TIMEZONE_OFFSET " + 
-				"FROM airports a, flights f " + 
-				"WHERE a.id = f.DESTINATION_AIRPORT_ID AND f.ORIGIN_AIRPORT_ID =?";
+		String sql = "SELECT DISTINCT( a.id), a.IATA_CODE, a.AIRPORT, a.CITY, a.STATE, a.COUNTRY, a.LATITUDE, a.LONGITUDE, a.TIMEZONE_OFFSET "
+				+ "FROM airports a, flights f " + "WHERE a.id = f.DESTINATION_AIRPORT_ID AND f.ORIGIN_AIRPORT_ID =?";
 		List<Airport> result = new ArrayList<Airport>();
 
 		try {
@@ -136,10 +134,10 @@ public class ExtFlightDelaysDAO {
 			ResultSet rs = st.executeQuery();
 
 			while (rs.next()) {
-					Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
-							rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
-							rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
-					result.add(airport);
+				Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
+						rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
+						rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
+				result.add(airport);
 			}
 
 			conn.close();
@@ -153,9 +151,8 @@ public class ExtFlightDelaysDAO {
 	}
 
 	public double getPeso(int p, int d) {
-		String sql = "SELECT AVG(f.ELAPSED_TIME) AS time " + 
-				"FROM flights f  " + 
-				"WHERE f.DESTINATION_AIRPORT_ID = ? AND f.ORIGIN_AIRPORT_ID=? OR f.DESTINATION_AIRPORT_ID =? AND f.ORIGIN_AIRPORT_ID=? ";
+		String sql = "SELECT AVG(f.ELAPSED_TIME) AS time " + "FROM flights f  "
+				+ "WHERE (f.DESTINATION_AIRPORT_ID = ? AND f.ORIGIN_AIRPORT_ID=?) OR (f.DESTINATION_AIRPORT_ID =? AND f.ORIGIN_AIRPORT_ID=?)";
 		double peso = 0.0;
 
 		try {
@@ -168,7 +165,7 @@ public class ExtFlightDelaysDAO {
 			ResultSet rs = st.executeQuery();
 
 			while (rs.next()) {
-					peso = rs.getDouble("time");
+				peso = rs.getDouble("time");
 			}
 
 			conn.close();

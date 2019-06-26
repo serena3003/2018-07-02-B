@@ -19,7 +19,8 @@ public class Model {
 	private Graph<Airport, DefaultWeightedEdge> grafo;
 	private List<Airport> airports;
 	private List<Airport> percorsoFinale;
-	private int oreVolo;
+	private double oreVoloTot; // risultato della ricorsione
+	private int oreVoloMax; // inserite dall'utente
 
 	public Model() {
 		this.dao = new ExtFlightDelaysDAO();
@@ -38,7 +39,8 @@ public class Model {
 			List<Airport> destination = dao.loadDestination(a.getId());
 			for (Airport d : destination) {
 				if (!d.equals(a)) {
-					if (this.grafo.containsVertex(d) && (!this.grafo.containsEdge(a, d) || !this.grafo.containsEdge(d,a))) {
+					if (this.grafo.containsVertex(d)
+							&& (!this.grafo.containsEdge(a, d) || !this.grafo.containsEdge(d, a))) {
 						DefaultWeightedEdge e = this.grafo.addEdge(a, d);
 						double peso = dao.getPeso(a.getId(), d.getId());
 						this.grafo.setEdgeWeight(e, peso);
@@ -52,8 +54,8 @@ public class Model {
 	public Graph<Airport, DefaultWeightedEdge> getGrafo() {
 		return this.grafo;
 	}
-	
-	public List<Airport> getAirport(){
+
+	public List<Airport> getAirport() {
 		Collections.sort(airports);
 		return airports;
 	}
@@ -61,7 +63,7 @@ public class Model {
 	public List<AeroportiCollegati> getVicini(Airport partenza) {
 		List<AeroportiCollegati> result = new ArrayList<AeroportiCollegati>();
 		List<Airport> vicini = Graphs.neighborListOf(this.grafo, partenza);
-		for(Airport a : vicini) {
+		for (Airport a : vicini) {
 			DefaultWeightedEdge e = grafo.getEdge(a, partenza);
 			double peso = grafo.getEdgeWeight(e);
 			result.add(new AeroportiCollegati(a, partenza, peso));
@@ -73,17 +75,52 @@ public class Model {
 	public List<Airport> cercaPercorso(int ore, Airport partenza) {
 		percorsoFinale = new ArrayList<Airport>();
 		List<Airport> parziale = new ArrayList<Airport>();
-		this.oreVolo = ore;
+		int oreVoloMax = ore;
+		double oreVolo = 0.0;
+		oreVoloTot = 0.0;
 		parziale.add(partenza);
-		
+
 		cerca(parziale, partenza);
-		
+
 		return percorsoFinale;
 	}
 
 	private void cerca(List<Airport> parziale, Airport partenza) {
-		// TODO Auto-generated method stub
-		
+		if (parziale.size() > 2) {
+			double oreVolo = calcolaOre(parziale, partenza);
+			System.out.println(oreVolo+"\n");
+			if ((oreVolo < oreVoloMax) && oreVolo > oreVoloTot) {
+				oreVoloTot = oreVolo;
+				percorsoFinale = new ArrayList<Airport>(parziale);
+				System.out.println("nuovo percorso:\n" + parziale.toString() + "\n");
+			}
+		} 
+
+		for (Airport a : Graphs.neighborListOf(this.grafo, partenza)) {
+			//Airport a = grafo.getEdgeTarget(e);
+			if (!parziale.contains(a)) {
+				parziale.add(a);
+				cerca(parziale, partenza);
+				parziale.remove(a);
+			}
+		}
+
+	}
+
+	private double calcolaOre(List<Airport> parziale, Airport partenza) {
+		double somma = 0;
+		for (Airport a : parziale) {
+			if(!a.equals(partenza)) {
+			DefaultWeightedEdge e = this.grafo.getEdge(partenza, a);
+			if(e!=null)
+				somma = somma + (this.grafo.getEdgeWeight(e) * 2);
+			else {
+				DefaultWeightedEdge e1 = this.grafo.getEdge(a, partenza);
+				somma = somma + (this.grafo.getEdgeWeight(e1) * 2);
+			}
+			}
+		}
+		return somma;
 	}
 
 }
